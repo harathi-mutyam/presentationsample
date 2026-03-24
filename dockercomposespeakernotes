@@ -1,0 +1,283 @@
+Slide 3:
+In a monolithic architecture, the entire application is built as one single unit.
+All components such as the user interface, backend logic, database access, and authentication are tightly connected within the same application.
+Because everything is connected:
+•	A small change may require rebuilding and redeploying the entire system 
+•	Scaling must be done for the whole application, even if only one part needs more resources 
+•	If one component fails, it can affect the entire application 
+But Modern applications rarely run in a single container.They usually contain multiple services, not just one container.
+For example a typical web application includes:
+•	A frontend application interacts with user
+•	A backend that processes application logic
+•	an API service that connects different services
+•	A database that store application data.
+•	A cache service stores temporary data
+All these services need to communicate with each other.
+For example, the frontend sends requests to the backend, and the backend reads or stores data in the database.
+Sometimes a cache service is also used to store temporary data to improve performance.
+Slide 4:
+When running these services using containers, several challenges appear.
+Services must start in the correct order, containers must communicate through networks, and developers must configure environment variables and settings for each service.
+Managing all of this manually can quickly become complicated and error-prone.”
+•	The commands can become long and complex
+•	Containers must be connected manually through networks. So developers must manually configure networks so containers can communicate.
+•	The startup order must be handled manually.For example the database must start before the application.
+•	Environment variables and configuration settings must be set for each container
+•	Sharing the setup with team members becomes difficult
+Slide5 and 6:
+“Docker Compose is a tool used to run multiple containers together as one application.
+Instead of starting each container manually, we define everything in a single file called docker-compose.yml.
+This file describes:
+•	What services we need 
+•	How they should run 
+•	How they connect with each other 
+Each service represents a part of the application, such as the frontend, backend, or database.
+Docker Compose also handles:
+•	Creating networks for communication 
+•	Managing volumes for data storage 
+•	Starting services in the correct order 
+With one command, like docker compose up, the entire application is built and started.
+This makes development easier, faster, and more organized.”
+
+Slide 7:
+In the services section, we define the configuration for each container or service in the application.
+Each service includes settings such as:
+Image – which container image to use 
+Ports – how the service is exposed outside 
+Volumes – where data is stored persistently 
+Environment variables – used for configuration, like database credentials 
+Networks – how services communicate with each other 
+Dependencies – which service should start first 
+These configurations control how each container runs and interacts with others.
+
+Slide 12:
+“To understand Docker Compose better, we can look at a sample voting application.
+This example includes several services:
+•	Voting web application
+•	Result display application
+•	Worker service
+•	Redis queue
+•	PostgreSQL database
+Users vote using the vote application.
+The vote is sent to Redis, which acts as a queue.
+The worker service processes the vote and stores it in the PostgreSQL database.
+The result application reads data from the database and displays the results.
+Docker Compose connects all these services automatically.”
+
+Vote Service
+“The vote service represents the front-end application where users can vote.
+This service is built from a local directory called vote using the Docker build process.
+The target: dev option indicates that the development stage of the Dockerfile is used.
+The service depends on Redis, which means Redis must be running and healthy before this service starts.
+A healthcheck is defined to ensure the application is working properly.
+Docker will periodically send a request to http://localhost to check if the service is responding.
+The volumes section mounts the local vote folder into the container, allowing developers to modify code locally while the container runs.
+The ports section maps port 8080 on the host machine to port 80 inside the container, allowing users to access the application through a browser.
+Finally, the service is connected to two networks:
+•	This service connects to both the front-tier and back-tier networks, because it communicates with users and backend services.”
+________________________________________
+2. Result Service
+“The result service displays the voting results.
+This service is also built from a local directory called result.
+Instead of running a normal Node.js process, it uses nodemon through the entrypoint command.
+Nodemon automatically restarts the application whenever code changes are detected, which is useful during development.
+This service depends on the PostgreSQL database, ensuring the database is healthy before starting.
+The volumes section mounts the result application code into the container.
+Two ports are exposed:
+•	8081:80 allows users to view the result web interface
+•	9229:9229 is used for debugging Node.js applications.
+Like the vote service, This service connects to both front-tier and back-tier networks.”
+________________________________________
+3. Worker Service
+“The worker service processes votes in the background.
+It is built from the worker directory.
+This service depends on both Redis and the PostgreSQL database, meaning both services must be healthy before the worker starts.
+The worker is connected only to the back-tier network because it communicates only with backend services, not with the user interface.”
+________________________________________
+4. Redis Service
+“The Redis service acts as a temporary message queue for storing votes.
+It uses the official Redis image called redis:alpine, which is a lightweight version of Redis.
+A volume mounts a folder called healthchecks, which contains scripts used to verify whether Redis is working correctly.
+A healthcheck command runs every 5 seconds to ensure Redis is functioning properly.
+This service is connected to the back-tier network.”
+________________________________________
+5. Database Service (PostgreSQL)
+“The db service runs a PostgreSQL database that stores the final vote results.
+It uses the official Docker image postgres:15-alpine.
+The environment variables define the database username and password.
+A volume named db-data stores the database files.
+This ensures that data is not lost even if the container stops or restarts.
+Another volume mounts the healthcheck scripts.
+A healthcheck script runs every 5 seconds to ensure the database is operational.
+This service also belongs to the back-tier network.”
+7. Volumes
+“The file defines a volume called db-data.
+Volumes are used to store persistent data.
+In this case, it stores PostgreSQL database files so that data remains available even if the container restarts.”
+________________________________________
+8. Networks
+“Two networks are defined in this file:
+Front-tier network
+This network is used for communication between user-facing services like the vote and result applications.
+Back-tier network
+This network is used for internal communication between backend services like Redis, worker, and the database.
+Using multiple networks improves security and organization.”
+git clone https://github.com/dockersamples/example-voting-app.git
+ls  # example-voting-app
+cd example-voting-app
+
+Run in this directory to build and run the app:
+
+docker compose up -d
+docker ps
+
+browser:
+publicip:8080  ->for voting
+publicip:8081  for result
+
+Slide 12:
+Now I’ll be presenting our full-stack web application containerized using Docker Compose.
+It includes three parts:
+•	React frontend (frontendui) – user interface 
+•	Node.js backend (backendapi) – handles logic and APIs 
+•	MySQL database (mysqldb) – stores application data 
+Each runs in a separate container, and Docker Compose manages them together.”
+“This diagram shows how the three containers are connected and work as one system.”
+Frontend (Left):“The React app runs in the browser and sends requests to the backend.
+It does not interact with the database directly.”
+Backend (Center):“The Node.js service processes requests, applies logic, and communicates with the database.
+It connects the frontend and database.”
+Database (Right):“MySQL stores all the data.
+Access is limited to the backend, which improves security.”
+Data Flow
+“Requests move from frontend to backend, then to the database.Responses follow the same path back.This keeps communication structured and controlled.
+Docker Compose (Center of Image)
+“In the center, we have Docker Compose.It manages all containers together and runs them as a single application, instead of handling each one separately.”
+“The docker-compose.yml file contains the full configuration of the application.
+It defines three services:
+•	MySQL for data storage 
+•	Node.js for backend logic 
+•	React for the user interface 
+It also sets up networks, which allow containers to communicate, and volumes, which keep the database data safe.”
+Services Section.This section defines all containers (services) in the application. Each service runs in its own isolated container. 
+MySQL Service (mysqldb)
+image: mysql:5.7
+Uses the official MySQL version 5.7 image from Docker Hub. No need to build a custom image. 
+restart: unless-stopped
+•	Automatically restarts the container unless it is manually stopped. Useful for reliability in production. 
+env_file: ./.env
+•	Loads environment variables from a .env file.Keeps sensitive data like passwords outside the code. 
+environment:
+    all these environment variables are declared in .env file and here we are using the variables
+Sets MySQL configuration: Root password ,Database name 
+•	Values are taken from .env. 
+ports:- Maps port from container to host machine. 
+👉 Shows default MySQL port mapping. 
+volumes:- db:/var/lib/mysql
+•	Mounts a named volume db to MySQL data directory. Ensures database data is not lost when container stops. 
+networks: Connects MySQL only to backend network
+Frontend cannot directly access database. 
+Backend Service (backendapi)
+build: Builds backend image using Dockerfile inside backendapi folder. 
+Backend Dockerfile
+“The backend Dockerfile tells Docker how to run Node.js API.
+•	Copies the backend code and installs dependencies 
+•	Runs the API with npm start 
+•	Uses environment variables to connect to the MySQL database
+The backend is stateless, meaning it can be rebuilt or restarted without losing data.” 
+Show: Open backendapi/Dockerfile → highlight install, copy, and start commands.
+
+depends_on:mysqldb.Ensures MySQL starts before backend. So it will Prevents connection errors at startup. 
+restart: unless-stopped.Same restart policy as MySQL. 
+env_file: ./.env.Loads environment variables for backend. 
+ports:Maps backend API port. Lefthandside is Host port and righthandside is container port
+environment: Sets database host as mysqldb. Docker uses service name as hostname.
+- DB_HOST=mysqldb
+    - DB_USER=$MYSQLDB_USER
+    - DB_PASSWORD=$MYSQLDB_ROOT_PASSWORD
+    - DB_NAME=$MYSQLDB_DATABASE
+    - DB_PORT=3306
+•	Database connection details passed as environment variables. 
+    - CLIENT_ORIGIN=$CLIENT_ORIGIN
+•	Defines frontend URL for CORS configuration. 
+networks: - backend  - frontend. Backend acts as a bridge between frontend and database. 
+•	Connected to both networks: 
+o	Backend → communicate with MySQL 
+o	Frontend → communicate with UI 
+Frontend Service (frontendui)
+Build:it will search for dockerfile in the frontendui folder.builds or generates the image using this docker file
+Frontend Dockerfile
+“The frontend Dockerfile tells Docker how to build the React app.
+•	First, it uses Node.js to build the React code. 
+•	Then, Nginx serves the built files as a website. 
+•	We give the frontend the backend API URL through an environment variable so it knows where to send requests.
+Multi-stage builds keep the container small and production-ready.” 
+Show: Open frontendui/Dockerfile → highlight lines: WORKDIR, COPY, RUN npm install, RUN npm run build, and Nginx copy.
+
+depends_on: Ensures frontend starts after backend. 
+
+args: Passes API URL during build time. 
+      - REACT_APP_API_BASE_URL=$CLIENT_API_BASE_URL
+•	React needs API endpoint at build time. 
+ports:left hand side shows the hostside and rightside is container portnumber.Maps frontend port to host. 
+networks:Connects only to frontend network.Cannot directly access database.
+Volumes are like special storage boxes for containers.
+Our database stores its files in this volume ,Even if we remove the MySQL container, data stays safe,Makes it easy to move data between environments 
+Networks Section: Defines two custom networks: 
+Backend Network : Used by: MySQL ,Backend 
+Purpose: Secure database communication 
+Frontend Network :  Used by : Frontend  , Backend 
+Purpose :UI communicates with API 
+docker --version
+docker compose version
+git clone https://github.com/harathi-mutyam/docker-compose-react-nodejs-mysql.git
+ls
+mv docker-compose-react-nodejs-mysql mybookslib
+Docker Compose uses the project folder name as a prefix for container names, networks, and volumes.
+Renaming the project folder makes container names cleaner and easier to manage.
+This helps during development, debugging, and running commands like docker ps or docker logs.
+cd mybookslib
+vim .env
+change replace with your public ip
+docker compose up -d --build
+docker compose ps
+docker ps -a
+docker images
+docker network ls
+docker volume ls
+docker volume inspect <volume-name>
+docker network inspect <network-name>
+docker image inspect <image-name>
+docker ps
+docker exec -it <mysqlcontainer-name> mysql -u root -p 123456
+USE bezkoder_db;
+SHOW TABLES;
+SELECT * FROM tutorials;
+exit;
+
+docker compose logs
+docker compose logs <servicename>
+ docker compose --dry-run
+docker compose down
+
+Slide 14
+Benefits of Docker Compose
+Speaker Notes
+“Docker Compose provides several advantages:
+•	Easy setup for multi-container applications
+•	Consistent development environments
+•	Better collaboration among developers
+•	Faster development and testing
+•	Simple configuration using YAML files
+It is especially useful for development and testing environments.”
+________________________________________
+Slide 15 – Limitations of Docker Compose
+Speaker Notes
+“Although Docker Compose is very useful, it also has some limitations.
+•	It works mainly on a single host machine
+•	Not designed for large-scale production systems
+•	Limited built-in monitoring and scaling features
+For large production environments, tools like Kubernetes are often used.”
+
+
+
